@@ -1,22 +1,39 @@
 // script.js (優化版)
 document.addEventListener('DOMContentLoaded', () => {
-    // --- 請將此處換成你自己的 Apps Script 網址 ---
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyorRECLxowOAOG2WA3Bwkkv_dLVKM9k5gwHDFUJpgR6brek5J_3gWJxo_7jA9rTnfd/exec';
-    // ---------------------------------------------
 
     const canvas = document.getElementById('roulette-canvas');
     const spinButton = document.getElementById('spin-button');
     const optionsList = document.getElementById('options-list');
     const addForm = document.getElementById('add-form');
     const newOptionInput = document.getElementById('new-option-input');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const collapsibleHeader = document.querySelector('.collapsible-header');
+    const arrow = document.querySelector('.arrow');
 
+    // 指定的顏色列表
+    const COLORS = ['#683DE6', '#3C91CD', '#10E5B3'];
+    
     let lunchWheel = null;
     let wheelSpinning = false;
     let currentOptions = [];
+    let colorIndex = 0;
+
+    const resizeCanvas = () => {
+        const container = canvas.parentElement;
+        const size = Math.min(container.clientWidth, 400);
+        
+        canvas.style.width = size + 'px';
+        canvas.style.height = size + 'px';
+        
+        canvas.width = size;
+        canvas.height = size;
+
+        return size;
+    };
 
     // 初始化/重設轉盤
     const createWheel = (segments) => {
-        // 如果正在轉動，先停止
         if (wheelSpinning && lunchWheel) {
             lunchWheel.stopAnimation(false);
         }
@@ -29,17 +46,25 @@ document.addEventListener('DOMContentLoaded', () => {
             currentOptions = segments;
             spinButton.disabled = false;
         }
-        
+
+        const canvasSize = resizeCanvas();
+
+        colorIndex = 0;
+
         lunchWheel = new Winwheel({
+            'startAngle': 90,
             'canvasId': 'roulette-canvas',
             'numSegments': currentOptions.length,
-            'outerRadius': 180,
-            'textFontSize': 16,
-            'segments': currentOptions.map(option => ({ 'fillStyle': getRandomColor(), 'text': option })),
+            'outerRadius': (canvasSize / 2) * 0.9, // 轉盤半徑為canvas大小的一半再乘以0.9
+            'textFontSize': 14,
+            'textFillStyle': '#FFFFFF',
+            'strokeStyle': '#AAAAAA',
+            'lineWidth': 2,
+            'segments': currentOptions.map(option => ({ 'fillStyle': getNextColor(), 'text': option })),
             'animation': {
                 'type': 'spinToStop',
-                'duration': 8,
-                'spins': 10,
+                'duration': 5, // 固定持續時間
+                'spins': 10,   // 固定旋轉圈數
                 'callbackFinished': alertPrize,
                 'callbackAfter': drawTriangle
             }
@@ -50,30 +75,39 @@ document.addEventListener('DOMContentLoaded', () => {
     // 繪製指針
     const drawTriangle = () => {
         if (!lunchWheel) return;
+        let canvasSize = lunchWheel.canvas.width;
         let ctx = lunchWheel.ctx;
         ctx.strokeStyle = 'navy';
         ctx.fillStyle = '#000000';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(170, 0);
-        ctx.lineTo(230, 0);
-        ctx.lineTo(200, 40);
-        ctx.lineTo(171, 0);
+        ctx.moveTo(canvasSize, canvasSize / 2 - 15);
+        ctx.lineTo(canvasSize, canvasSize / 2 + 15);
+        ctx.lineTo(canvasSize - 30, canvasSize / 2);
+        ctx.closePath();
         ctx.stroke();
         ctx.fill();
     };
     
-    // 轉動結束後跳出提示
-    const alertPrize = (indicatedSegment) => {
-        // 檢查 indicatedSegment 是否存在以及是否有 text 屬性
-        if (indicatedSegment && indicatedSegment.text) {
-            alert(`恭喜！今天就吃「${indicatedSegment.text}」吧！`);
+    const getSegmentAtAngle = (wheel, offsetAngle = 270) => {
+        let targetAngle = (wheel.rotationAngle + offsetAngle) % 360;
+        let adjustedAngle = (360 - targetAngle + 360) % 360;
+        const segmentAngle = 360 / wheel.numSegments;
+        const segmentIndex = Math.floor(adjustedAngle / segmentAngle);
+
+        return wheel.segments[segmentIndex + 1];
+    };
+
+    const alertPrize = () => {
+        const segment = getSegmentAtAngle(lunchWheel, 270);
+        if (segment && segment.text) {
+            alert(`恭喜！今天就吃「${segment.text}」吧！`);
         } else {
             alert('轉盤出錯了，請再試一次。');
         }
         wheelSpinning = false;
         spinButton.disabled = false;
-    }
+    };
 
     // 更新畫面上的選項列表
     const updateOptionsList = (options) => {
@@ -94,8 +128,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    const showLoading = () => {
+        loadingOverlay.style.display = 'flex';
+    };
+
+    const hideLoading = () => {
+        loadingOverlay.style.display = 'none';
+    };
+
+    // 獲取下一個顏色（循環使用指定顏色）
+    const getNextColor = () => {
+        const color = COLORS[colorIndex % COLORS.length];
+        colorIndex++;
+        return color;
+    };
+
     // 從 Google Sheet 獲取資料
     const fetchOptions = async () => {
+        showLoading();
         try {
             const response = await fetch(SCRIPT_URL, { method: 'GET' });
             if (!response.ok) {
@@ -113,10 +163,11 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('無法從 Google Sheet 載入資料，請檢查主控台錯誤訊息。');
             createWheel([]); // 即使載入失敗，也初始化一個空的轉盤
             updateOptionsList([]);
+        } finally {
+            hideLoading();
         }
     };
     
-    // 處理新增選項
     const handleAdd = async (event) => {
         event.preventDefault();
         const newOption = newOptionInput.value.trim();
@@ -131,6 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
         button.textContent = '新增中...';
         button.disabled = true;
 
+        showLoading();
         try {
             const response = await fetch(SCRIPT_URL, {
                 method: 'POST',
@@ -147,15 +199,16 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('新增失敗:', error);
             alert('新增選項失敗！');
         } finally {
+            hideLoading();
             button.textContent = '新增選項';
             button.disabled = false;
         }
     };
 
-    // 處理刪除選項
     const handleDelete = async (optionName) => {
         if (!confirm(`確定要刪除「${optionName}」嗎？`)) return;
 
+        showLoading();
         try {
             const response = await fetch(SCRIPT_URL, {
                 method: 'POST',
@@ -170,30 +223,37 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('刪除失敗:', error);
             alert('刪除選項失敗！');
+        } finally {
+            hideLoading();
         }
     };
 
-    // 點擊轉動按鈕
     spinButton.addEventListener('click', () => {
         if (wheelSpinning || !lunchWheel) return;
         wheelSpinning = true;
         spinButton.disabled = true;
+
+        lunchWheel.rotationAngle = 0;
+
         lunchWheel.startAnimation();
     });
 
-    // 監聽表單提交事件
     addForm.addEventListener('submit', handleAdd);
 
-    // 初始載入資料
+    window.addEventListener('resize', () => {
+        if (lunchWheel && !wheelSpinning) {
+            createWheel(currentOptions);
+        }
+    });
+
     fetchOptions();
     
-    // 輔助函數：產生隨機顏色
-    const getRandomColor = () => {
-        const letters = '0123456789ABCDEF';
-        let color = '#';
-        for (let i = 0; i < 6; i++) {
-            color += letters[Math.floor(Math.random() * 16)];
-        }
-        return color;
-    };
+    if (collapsibleHeader && arrow) {
+        collapsibleHeader.addEventListener('click', () => {
+            optionsList.classList.toggle('expanded');
+            arrow.classList.toggle('rotated');
+        });
+    }
+    
+
 });
