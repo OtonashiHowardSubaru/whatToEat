@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>今日午餐決定器</title>
+  <link rel="stylesheet" href="src/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>今天午餐吃什麼？</h1>
+
+    <div class="roulette-container">
+      <canvas id="roulette-canvas" width="400" height="400"></canvas>
+      <button id="spin-button">開轉！</button>
+    </div>
+
+    <div class="controls-container">
+      <h2>午餐選項管理</h2> 
+      <form id="add-form">
+        <input type="text" id="new-option-input" placeholder="輸入新的餐廳名稱..." required>
+        <button type="submit">新增選項</button>
+      </form>
+
+      <h3>目前選項列表</h3>
+      <ul id="options-list">
+        <li class="loading">載入中...</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="/src/script/Winwheel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
+
+  <script src="/src/script/script.js"></script>
+</body>
+
+</html>

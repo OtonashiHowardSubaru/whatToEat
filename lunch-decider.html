@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>今日午餐決定器（Google Sheets版）</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Microsoft JhengHei', Arial, sans-serif;
+      background: linear-gradient(135deg, #FFE5B4, #FFD700);
+      color: #333;
+      line-height: 1.6;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      padding: 20px 0;
+      margin-bottom: 30px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      color: #8B4513;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .main-content {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
+      justify-content: center;
+    }
+
+    .wheel-section, .management-section {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      flex: 1;
+      min-width: 300px;
+      max-width: 500px;
+    }
+
+    .section-title {
+      text-align: center;
+      color: #8B4513;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #FFD700;
+    }
+
+    /* 转盘样式 */
+    #wheel-container {
+      position: relative;
+      width: 350px;
+      height: 350px;
+      margin: 0 auto;
+    }
+
+    #wheel {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      position: relative;
+      overflow: hidden;
+      border: 8px solid #8B4513;
+      box-shadow: 0 0 20px rgba(0,0,0,0.2);
+      transition: transform 5s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+      transform: rotate(0deg);
+    }
+
+    .wheel-segment {
+      position: absolute;
+      width: 50%;
+      height: 50%;
+      transform-origin: bottom right;
+      left: 0;
+      top: 0;
+      clip-path: polygon(0 0, 100% 0, 100% 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .segment-text {
+      position: absolute;
+      left: 50%;
+      top: 25%;
+      transform-origin: 0 100px;
+      width: 100px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 14px;
+      color: white;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+      transform: rotate(45deg);
+    }
+
+    #pointer {
+      position: absolute;
+      top: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40px;
+      height: 40px;
+      background: #FF4500;
+      clip-path: polygon(50% 100%, 0 0, 100% 0);
+      z-index: 10;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+    }
+
+    #spin-button {
+      display: block;
+      margin: 30px auto 0;
+      padding: 15px 40px;
+      font-size: 1.2rem;
+      background: linear-gradient(to bottom, #FF8C00, #FF4500);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+    }
+
+    #spin-button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+      background: linear-gradient(to bottom, #FF9E20, #FF5510);
+    }
+
+    #spin-button:disabled {
+      background: #cccccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    #result {
+      text-align: center;
+      font-size: 1.8rem;
+      font-weight: bold;
+      margin-top: 25px;
+      min-height: 60px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 10px;
+      color: #8B4513;
+    }
+
+    /* 管理区域样式 */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+      color: #8B4513;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #FFD700;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    #add-button {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(to bottom, #32CD32, #228B22);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    #add-button:hover {
+      background: linear-gradient(to bottom, #42DD42, #329B32);
+      transform: translateY(-2px);
+    }
+
+    #options-list {
+      list-style-type: none;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 20px;
+      border: 2px solid #FFD700;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    #options-list li {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px;
+      border-bottom: 1px dashed #eee;
+      align-items: center;
+    }
+
+    #options-list li:last-child {
+      border-bottom: none;
+    }
+
+    .remove-button {
+      background: #FF4500;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .remove-button:hover {
+      background: #ff2500;
+      transform: scale(1.05);
+    }
+
+    .instructions {
+      background: rgba(255, 255, 255, 0.7);
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 25px;
+      text-align: center;
+      font-size: 1.1rem;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 30px;
+      padding: 20px;
+      color: #8B4513;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 768px) {
+      .main-content {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      #wheel-container {
+        width: 300px;
+        height: 300px;
+      }
+      
+      h1 {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🍽️ 今日午餐決定器</h1>
+      <div class="setup-instructions">
+        <h3>設定說明</h3>
+        <ol>
+          <li>建立一個Google Sheet，第一欄(A欄)用於存放午餐選項</li>
+          <li>將Google Sheet設定為「 anyone with the link can view 」</li>
+          <li>在下方輸入您的Google Sheet公開連結</li>
+          <li>點擊「連接資料庫」按鈕載入選項</li>
+        </ol>
+            
+        <div class="form-group">
+          <label for="sheet-url">Google Sheet 公開連結:</label>
+          <input type="text" id="sheet-url" placeholder="請輸入Google Sheet的公開連結">
+        </div>
+      </div>
+          
+      <div class="auth-section">
+        <button id="connect-button">連接資料庫</button>
+      </div>
+    </header>
+    
+    <div class="main-content">
+      <section class="wheel-section">
+        <h2 class="section-title">幸運轉盤</h2>
+        <div id="wheel-container">
+          <div id="pointer"></div>
+          <div id="wheel"></div>
+        </div>
+        <button id="spin-button">開始旋轉</button>
+        <div id="result">今天吃什麼呢？</div>
+      </section>
+      
+      <section class="management-section">
+        <h2 class="section-title">資料管理</h2>
+        <div class="form-group">
+          <label for="new-option">新增選項:</label>
+          <input type="text" id="new-option" placeholder="輸入午餐選項，例如：牛肉麵、壽司、漢堡..." disabled>
+        </div>
+        <button id="add-button" disabled>新增選項</button>
+        
+        <h3 style="margin-top: 25px; color: #8B4513;">目前選項</h3>
+        <ul id="options-list">
+          <li>請先連接資料庫以載入選項</li>
+        </ul>
+      </section>
+    </div>
+    
+    <footer>
+      <p>資料來源為Google Sheets，所有選項均從雲端資料庫讀取</p>
+    </footer>
+  </div>
+
+  <script>
+    // Google Sheets相關設定
+    let SHEET_ID = '';
+    const API_KEY = ''; // 不再需要API金鑰
+    const RANGE = 'Sheet1!A:A'; // 讀取第一欄所有資料
+    
+    // 選項列表
+    let options = [];
+    
+    // 轉盤顏色
+    const colors = [
+      "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0",
+      "#9966FF", "#FF9F40", "#8AC926", "#1982C4",
+      "#6A4C93", "#F15BB5", "#00BBF9", "#00F5D4"
+    ];
+    
+    // DOM載入完成後初始化
+    document.addEventListener('DOMContentLoaded', function() {
+      setupEventListeners();
+    });
+    
+    // 更新選項列表
+    function updateOptionsList() {
+      const optionsList = document.getElementById('options-list');
+      optionsList.innerHTML = '';
+      
+      options.forEach((option, index) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <span>${option}</span>
+          <button class="remove-button" data-index="${index}">刪除</button>
+        `;
+        optionsList.appendChild(li);
+      });
+      
+      // 綁定刪除按鈕事件
+      document.querySelectorAll('.remove-button').forEach(button => {
+        button.addEventListener('click', function() {
+          const index = parseInt(this.getAttribute('data-index'));
+          removeOption(index);
+        });
+      });
+    }
+    
+    // 繪製轉盤
+    function drawWheel() {
+      const wheel = document.getElementById('wheel');
+      wheel.innerHTML = '';
+      
+      if (options.length === 0) {
+        wheel.style.background = '#f0f0f0';
+        return;
+      }
+      
+      const segmentAngle = 360 / options.length;
+      
+      options.forEach((option, index) => {
+        const segment = document.createElement('div');
+        segment.className = 'wheel-segment';
+        segment.style.transform = `rotate(${index * segmentAngle}deg)`;
+        segment.style.backgroundColor = colors[index % colors.length];
+        
+        const text = document.createElement('div');
+        text.className = 'segment-text';
+        text.textContent = option;
+        text.style.transform = `rotate(${segmentAngle/2}deg)`;
+        
+        segment.appendChild(text);
+        wheel.appendChild(segment);
+      });
+    }
+    
+    // 設置事件監聽器
+    function setupEventListeners() {
+      document.getElementById('connect-button').addEventListener('click', connectDatabase);
+      document.getElementById('spin-button').addEventListener('click', spinWheel);
+      document.getElementById('add-button').addEventListener('click', addOption);
+      document.getElementById('new-option').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          addOption();
+        }
+      });
+    }
+    
+    // 連接Google Sheets資料庫
+    function connectDatabase() {
+      const sheetUrl = document.getElementById('sheet-url').value.trim();
+      
+      if (!sheetUrl) {
+        showResult('請輸入Google Sheet連結');
+        return;
+      }
+      
+      // 從URL中提取Sheet ID
+      try {
+        const urlParts = sheetUrl.split('/');
+        const sheetIdIndex = urlParts.indexOf('d') + 1;
+        SHEET_ID = urlParts[sheetIdIndex];
+        
+        if (!SHEET_ID) {
+          throw new Error('無法從連結中提取Sheet ID');
+        }
+      } catch (error) {
+        showResult('連結格式錯誤，請檢查後再試');
+        return;
+      }
+      
+      // 載入選項
+      loadOptions();
+    }
+    
+    // 從Google Sheets載入選項（使用公開CSV方式）
+    function loadOptions() {
+      showResult('正在載入選項...');
+      
+      // 使用Google Sheets的CSV匯出功能
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1&range=A:A`;
+      
+      fetch(csvUrl)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('無法讀取資料，請確認Google Sheet已設定為公開');
+          }
+          return response.text();
+        })
+        .then(data => {
+          // 解析CSV數據
+          const lines = data.split('\n').map(line => line.trim().replace(/"/g, ''));
+          options = lines.filter(line => line !== '' && line !== ',');
+          
+          if (options.length === 0) {
+            options = ['牛肉麵', '壽司', '漢堡', '炒飯', '披薩', '水餃'];
+          }
+          
+          updateOptionsList();
+          drawWheel();
+          
+          // 啟用控制項
+          document.getElementById('spin-button').disabled = false;
+          document.getElementById('add-button').disabled = false;
+          document.getElementById('new-option').disabled = false;
+          
+          showResult('資料載入成功！');
+        })
+        .catch(error => {
+          console.error('載入選項時發生錯誤:', error);
+          showResult(`載入失敗: ${error.message}`);
+        });
+    }
+    
+    // 新增選項（注意：此版本僅在前端新增，不會更新Google Sheet）
+    function addOption() {
+      const input = document.getElementById('new-option');
+      const value = input.value.trim();
+      
+      if (!value) {
+        showResult('請輸入選項名稱');
+        return;
+      }
+      
+      if (options.includes(value)) {
+        showResult('選項已存在！');
+        return;
+      }
+      
+      options.push(value);
+      updateOptionsList();
+      drawWheel();
+      input.value = '';
+      showResult(`已新增選項: ${value}`);
+      
+      // 提示用戶此版本不會同步到Google Sheet
+      setTimeout(() => {
+        showResult('注意：此版本僅在前端新增選項，不會同步到Google Sheet');
+      }, 2000);
+    }
+    
+    // 刪除選項（注意：此版本僅在前端刪除，不會更新Google Sheet）
+    function removeOption(index) {
+      if (index < 0 || index >= options.length) return;
+      
+      const removed = options.splice(index, 1)[0];
+      updateOptionsList();
+      drawWheel();
+      showResult(`已刪除選項: ${removed}`);
+      
+      // 提示用戶此版本不會同步到Google Sheet
+      setTimeout(() => {
+        showResult('注意：此版本僅在前端刪除選項，不會同步到Google Sheet');
+      }, 2000);
+    }
+    
+    // 旋轉轉盤
+    function spinWheel() {
+      if (options.length < 2) {
+        showResult('至少需要兩個選項才能旋轉！');
+        return;
+      }
+      
+      const spinButton = document.getElementById('spin-button');
+      spinButton.disabled = true;
+      showResult('旋轉中...');
+      
+      const wheel = document.getElementById('wheel');
+      const spins = 5; // 旋轉圈數
+      const extraDegrees = Math.floor(Math.random() * 360);
+      const totalDegrees = spins * 360 + extraDegrees;
+      
+      wheel.style.transform = `rotate(${totalDegrees}deg)`;
+      
+      // 計算結果
+      setTimeout(() => {
+        const segmentAngle = 360 / options.length;
+        // 調整角度計算以正確獲取結果
+        const normalizedDegrees = (360 - (totalDegrees % 360)) % 360;
+        const selectedIndex = Math.floor(normalizedDegrees / segmentAngle);
+        const result = options[selectedIndex];
+        
+        showResult(`今天午餐吃: ${result}`);
+        spinButton.disabled = false;
+      }, 5000);
+    }
+    
+    // 顯示結果
+    function showResult(message) {
+      document.getElementById('result').textContent = message;
+    }
+  </script>
+</body>
+</html>
