@@ -1,7 +1,7 @@
 // script.js (優化版)
 document.addEventListener('DOMContentLoaded', () => {
     // --- 請將此處換成你自己的 Apps Script 網址 ---
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzY_6nD6LmNDX1JSSVHtmQetAueCUFQMkguySO_gFjUSx29ZfSKRjrwOUlstwFQhTfo/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyorRECLxowOAOG2WA3Bwkkv_dLVKM9k5gwHDFUJpgR6brek5J_3gWJxo_7jA9rTnfd/exec';
     // ---------------------------------------------
 
     const canvas = document.getElementById('roulette-canvas');
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const alertPrize = (indicatedSegment) => {
         // 檢查 indicatedSegment 是否存在以及是否有 text 屬性
         if (indicatedSegment && indicatedSegment.text) {
-             alert(`恭喜！今天就吃「${indicatedSegment.text}」吧！`);
+            alert(`恭喜！今天就吃「${indicatedSegment.text}」吧！`);
         } else {
             alert('轉盤出錯了，請再試一次。');
         }
@@ -135,7 +135,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify({ action: 'add', name: newOption }),
-                headers: { 'Content-Type': 'application/json' }
             });
             const result = await response.json();
             if (result.status === 'success') {
@@ -161,7 +160,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify({ action: 'delete', name: optionName }),
-                headers: { 'Content-Type': 'application/json' }
             });
             const result = await response.json();
             if (result.status === 'success') {
