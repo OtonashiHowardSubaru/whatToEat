@@ -132,7 +132,7 @@ h1 {
 }
 
 .collapsible-content.expanded {
-    max-height: 1000px; /* 足够大的值以容纳内容 */
+    max-height: none;
 }
 
 #options-list li {
